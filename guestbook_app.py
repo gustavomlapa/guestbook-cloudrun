@@ -28,6 +28,7 @@ def add_message(newmessage):
 def main():
     response = get_messages()
     json_response = json.loads(response.data)
+    db=_mysql.connect(host="localhost",user="joebob", passwd="pass1@12",db="db1")
     return render_template('home.html', messages=json_response)
 
 
