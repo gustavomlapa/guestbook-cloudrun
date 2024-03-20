@@ -22,6 +22,7 @@ def add_message(newmessage):
                 'message':bleach.clean(newjson['message']),
                 'date':time.time()}
     messages.append(msg_data)
+    db=_mysql.connect(host="localhost",user="joebob", passwd="pass1@12",db="db1")
     return  jsonify({})
 
 @app.route('/')
