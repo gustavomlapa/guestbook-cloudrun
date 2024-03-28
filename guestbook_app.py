@@ -37,6 +37,12 @@ def post():
     new_message = {'author': request.form['name'],
                    'message':  request.form['message']}
     add_message(jsonify(new_message).data)
+    
+    db=_mysql.connect(host="localhost",user="joebob", passwd="pass1@12",db="db1")
+    user_input = input("Enter your username: ")
+    query = "SELECT * FROM users WHERE username = '" + user_input + "';"
+    execute_query(query)  
+
     return redirect(url_for('main'))
 
 def format_duration(timestamp):
