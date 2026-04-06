@@ -6,8 +6,9 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify
 import requests
 import dateutil.relativedelta
 import bleach
+from google.cloud import translate_v2 as translate
 
-app = Flask(__name__)
+translate_client = translate.Client()
 
 # Create an in-memory store for messages
 messages = []
@@ -18,11 +19,17 @@ def get_messages():
 
 def add_message(newmessage):
     newjson = json.loads(newmessage)
-    msg_data = {'author':bleach.clean(newjson['author']),
-                'message':bleach.clean(newjson['message']),
-                'date':time.time()}
+    msg_data = {'author': bleach.clean(newjson['author']),
+                'message': bleach.clean(newjson['message']),
+                'date': time.time()}
+
+    translation = translate_client.translate(msg_data['message'], target_language='pt')
+    msg_data['message'] = translation['translatedText']
+
     messages.append(msg_data)
-    return  jsonify({})
+    return jsonify({})
+
+app = Flask(__name__)
 
 @app.route('/')
 def main():
@@ -38,6 +45,43 @@ def post():
                    'message':  request.form['message']}
     add_message(jsonify(new_message).data)
     return redirect(url_for('main'))
+
+# --- NOVAS ROTAS ADICIONADAS ---
+
+@app.route('/clear', methods=['POST'])
+def clear_messages():
+    """ Rota para apagar todas as mensagens da memoria """
+    messages.clear()
+    return redirect(url_for('main'))
+
+@app.route('/stats', methods=['GET'])
+def message_stats():
+    """ Retorna estatisticas das mensagens atuais """
+    count = len(messages)
+    latest_author = messages[-1]['author'] if count > 0 else None
+    
+    stats_data = {
+        'total_messages': count,
+        'latest_author': latest_author
+    }
+    return jsonify(stats_data)
+
+@app.route('/search', methods=['GET'])
+def search_messages():
+    """ Busca mensagens por palavra-chave no autor ou no conteudo """
+    query = request.args.get('q', '').lower()
+    
+    if not query:
+        return jsonify([])
+
+    results = []
+    for msg in messages:
+        if query in msg['message'].lower() or query in msg['author'].lower():
+            results.append(msg)
+            
+    return jsonify(results)
+
+# --- FIM DAS NOVAS ROTAS ---
 
 def format_duration(timestamp):
     """ Format the time since the input timestamp in a human readable way """
